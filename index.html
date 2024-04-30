@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Dynamic Audio Mixer</title>
+</head>
+<style>
+    html {
+    padding-left: 10%;
+    padding-right: 10%;
+
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    background-color: rgb(255, 255, 255);
+    font-family: 'Courier New', Courier, monospace;
+    color: rgb(0, 0, 0);
+}
+
+
+    h1 {
+        font-size: 2.5em;
+        margin-bottom: 20px;
+    }
+
+    .start-button, .stop-button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    color: #fff;
+    font-family:'Courier New', Courier, monospace;    font-size: 1.2em;
+    transition: background-color 0.3s ease;
+    outline: 1px black solid;
+    
+}
+
+.start-button {
+    background-color: #4CAF50;
+}
+
+.start-button:hover {
+    background-color: #b9dfbb;
+    color: black;
+}
+
+.stop-button {
+    background-color: #FF5733;
+}
+
+.stop-button:hover {
+    background-color: #eea69e;
+    color: black;
+
+}
+
+
+    progress {
+        width: 300px;
+        height: 20px;
+        margin-top: 20px;
+    }
+
+    .audio-control {
+        margin-top: 10px;
+    }
+
+</style>
+<body>
+    <h1>The Mirrorered Confessional Audio Interphase</h1>
+    <br><br>
+    <button class="start-button" id="controlButton" onclick="toggleDynamicMix()">Start Confessional Mix</button>
+    <script>
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        let sources = [];
+        let gainNodes = [];
+        let buffers = [];
+        let focusIndex = 0;
+        let intervalId;
+        let isPlaying = false;
+        const amplifiers = [1.25, 0.75, 1.25, 4.5];  // Specific amplifier settings for each track
+
+        async function loadAudioFile(url) {
+            const response = await fetch(url);
+            const arrayBuffer = await response.arrayBuffer();
+            return audioCtx.decodeAudioData(arrayBuffer);
+        }
+
+        function setupGainNodes() {
+            gainNodes = buffers.map((_, i) => {
+                const gainNode = audioCtx.createGain();
+                gainNode.gain.setValueAtTime(amplifiers[i], audioCtx.currentTime);  // Set initial amplifier
+                return gainNode;
+            });
+            updateGains();  // Initial gain setup
+        }
+
+        function updateGains() {
+            const transitionDuration = 1.5;  // Transition duration of 1.5 seconds
+            const currentTime = audioCtx.currentTime;
+
+            gainNodes.forEach((gain, i) => {
+                const targetVolume = (i === focusIndex) ? 1 : 0.3;  // Focus track at full volume, others at reduced volume
+                const newVolume = targetVolume * amplifiers[i];
+                gain.gain.linearRampToValueAtTime(newVolume, currentTime + transitionDuration);  // Smooth transition to new volume
+            });
+        }
+
+        function toggleDynamicMix() {
+            if (isPlaying) {
+                stopDynamicMix();
+                document.getElementById("controlButton").innerText = "Start Confessional Mix";
+                document.getElementById("controlButton").className = "start-button";
+            } else {
+                startDynamicMix();
+                document.getElementById("controlButton").innerText = "Stop Confessional Mix";
+                document.getElementById("controlButton").className = "stop-button";
+            }
+            isPlaying = !isPlaying;
+        }
+
+        function startDynamicMix() {
+            const audioFiles = [
+                "Audios/Avelino_Cortina.mp3",
+                "Audios/Mole_McHenry.mp3",
+                "Audios/Anonymous.mp3",
+                "Audios/Timo_Weila.mp3",
+            ];
+
+            clearInterval(intervalId);
+            sources.forEach(source => source.disconnect());  // Disconnect existing sources
+            sources = [];
+
+            Promise.all(audioFiles.map(file => loadAudioFile(file))).then(loadedBuffers => {
+                buffers = loadedBuffers;
+                setupGainNodes();
+
+                buffers.forEach((buffer, i) => {
+                    const source = audioCtx.createBufferSource();
+                    source.buffer = buffer;
+                    source.loop = true;  // Enable looping
+                    source.connect(gainNodes[i]).connect(audioCtx.destination);
+
+                    // Start the audio sources with specified initial delays
+                    const startTime = audioCtx.currentTime + (i * 5); // Incremental delays (0s, 5s, 10s, 15s)
+                    source.start(startTime);
+                    sources.push(source);
+                });
+
+                // Rotate focus every 20 seconds with smooth transitions
+                intervalId = setInterval(() => {
+                    focusIndex = (focusIndex + 1) % buffers.length;
+                    updateGains();
+                }, 5000); // Change focus every 20 seconds
+            });
+        }
+
+        function stopDynamicMix() {
+            clearInterval(intervalId);
+            sources.forEach(source => source.disconnect());  // Disconnect existing sources
+            sources = [];
+        }
+    </script>
+</body>
+</html>
