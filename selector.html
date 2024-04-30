@@ -4,129 +4,147 @@
 <meta charset="UTF-8">
 <title>Dynamic Audio Mixer</title>
 <style>
-    html, body {
-        height: 100%;
+    body {
+        font-family: Arial, sans-serif;
+        background-color: #f0f0f0;
         margin: 0;
         padding: 0;
         display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+    }
+
+    .container {
+        max-width: 800px;
+        padding: 20px;
+        background-color: #fff;
+        border-radius: 5px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        text-align: center;
+    }
+
+    .folder-stack {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 20px;
+        margin-top: 20px;
+    }
+
+    .folder {
+        width: 150px;
+        height: 150px;
+        background-color: #7593b2;
+        border-radius: 5px;
+        display: flex;
         align-items: center;
         justify-content: center;
-        background-color: #f4f4f4;
-        font-family: 'Arial', sans-serif;
-    }
-    .audio-grid {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 10px;
-        width: 60%;
-        padding: 20px;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        background: #fff;
-        border-radius: 10px;
-    }
-    .audio-tile, .stop-all-button {
-        padding: 20px;
-        background-color: #4CAF50;
-        border: none;
-        border-radius: 5px;
+        text-align: center;
         color: #fff;
-        font-size: 1.5em;
+        font-weight: bold;
+        font-size: 1.2em;
+        text-decoration: none;
+        transition: background-color 0.3s ease;
+    }
+
+    .folder:hover {
+        background-color: #0056b3;
+    }
+
+    audio {
+        width: 100%;
+        margin-top: 20px;
+    }
+
+    .slider-container {
+        width: 100%;
+        margin-top: 20px;
+        position: relative;
+    }
+
+    .slider {
+        width: 100%;
+        height: 10px;
+        background-color: #ccc;
+        border-radius: 5px;
+    }
+
+    .dot {
+        width: 10px;
+        height: 10px;
+        background-color: #000000;
+        border-radius: 50%;
+        position: absolute;
+        top: 0;
+        left: 0;
+        transform: translateX(-50%);
+    }
+
+    .stop-all-button {
+        background-color: #dc3545;
+        color: #fff;
+        border: none;
+        padding: 10px 20px;
+        font-size: 1em;
+        border-radius: 5px;
+        margin-top: 20px;
         cursor: pointer;
         transition: background-color 0.3s ease;
     }
-    .audio-tile:hover, .stop-all-button:hover {
-        background-color: #b9dfbb;
-        color: black;
-    }
-    .stop-all-button {
-        grid-column: span 2; /* makes it span across all columns */
-        margin-top: 10px;
-        background-color: #FF5733;
-    }
-    h1 {
-        grid-column: span 2;
-        text-align: center;
-        margin-bottom: 15px;
-    }
-    #statusBar {
-        grid-column: span 2;
-        font-size: 0.8em;
-        color: #555;
-        margin-top: 5px;
+
+    .stop-all-button:hover {
+        background-color: #c82333;
     }
 </style>
 </head>
 <body>
-    <div class="audio-grid">
-        <h1>The Mirrored Confessional Audio Interface</h1>
-        <button class="audio-tile" onclick="playAudio(0)">Track 1</button>
-        <button class="audio-tile" onclick="playAudio(1)">Track 2</button>
-        <button class="audio-tile" onclick="playAudio(2)">Track 3</button>
-        <button class="audio-tile" onclick="playAudio(3)">Track 4</button>
+    <div class="container">
+        <h1>Dynamic Audio Mixer</h1>
+        <div class="folder-stack">
+            <a href="#" class="folder" onclick="playAudio('Audios/Avelino_Cortina.mp3')">Track 1</a>
+            <a href="#" class="folder" onclick="playAudio('Audios/Mole_McHenry.mp3')">Track 2</a>
+            <a href="#" class="folder" onclick="playAudio('Audios/Anonymous.mp3')">Track 3</a>
+            <a href="#" class="folder" onclick="playAudio('Audios/Timo_Weila.mp3')">Track 4</a>
+        </div>
+
+        <audio id="audioPlayer" controls autoplay style="display: none;"></audio>
+
+        <div class="slider-container">
+            <div class="slider">
+                <div class="dot" id="sliderDot"></div>
+            </div>
+        </div>
+
         <button class="stop-all-button" onclick="stopAll()">Stop All Tracks</button>
-        <div id="statusBar">Select a track to play.</div>
     </div>
 
     <script>
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        let sources = Array(4).fill(null); // Initialize source array to manage multiple tracks
-        const audioFiles = [
-            "Audios/Avelino_Cortina.mp3",
-            "Audios/Mole_McHenry.mp3",
-            "Audios/Anonymous.mp3",
-            "Audios/Timo_Weila.mp3",
-        ];
+        const audioPlayer = document.getElementById('audioPlayer');
+        const sliderDot = document.getElementById('sliderDot');
+        let animationId;
 
-        async function loadAudioFiles() {
-            const filePromises = audioFiles.map(file => fetch(file).then(response => response.arrayBuffer()));
-            const arrayBuffers = await Promise.all(filePromises);
-            const decodePromises = arrayBuffers.map(arrayBuffer => audioCtx.decodeAudioData(arrayBuffer));
-            buffers = await Promise.all(decodePromises);
+        function playAudio(audioSrc) {
+            audioPlayer.src = audioSrc;
+            audioPlayer.play();
+            updateSlider();
         }
 
-        function playAudio(index) {
-            if (audioCtx.state === 'suspended') {
-                audioCtx.resume();
+        function updateSlider() {
+            const progress = (audioPlayer.currentTime / audioPlayer.duration) * 100;
+            sliderDot.style.left = `${progress}%`;
+            if (!audioPlayer.paused) {
+                animationId = requestAnimationFrame(updateSlider);
             }
-            if (sources[index]) {
-                sources[index].stop();
-                sources[index].disconnect();
-            }
-            sources.forEach((src, i) => {
-                if (src && i !== index) {
-                    src.stop();
-                    src.disconnect();
-                    sources[i] = null;
-                }
-            });
-
-            const source = audioCtx.createBufferSource();
-            source.buffer = buffers[index];
-            source.connect(audioCtx.destination);
-            source.start();
-            sources[index] = source;
-
-            updateStatusBar(`Playing Track ${index + 1}`);
         }
+
+        audioPlayer.addEventListener('timeupdate', updateSlider);
 
         function stopAll() {
-            sources.forEach(src => {
-                if (src) {
-                    src.stop();
-                    src.disconnect();
-                }
-            });
-            sources.fill(null);
-            updateStatusBar("All tracks stopped.");
+            audioPlayer.pause();
+            cancelAnimationFrame(animationId);
+            sliderDot.style.left = '0';
         }
-
-        function updateStatusBar(message) {
-            document.getElementById("statusBar").innerText = message;
-        }
-
-        window.onload = () => {
-            loadAudioFiles();
-        };
     </script>
 </body>
 </html>
