@@ -46,15 +46,7 @@
     color: black;
 }
 
-.stop-button {
-    background-color: #FF5733;
-}
 
-.stop-button:hover {
-    background-color: #eea69e;
-    color: black;
-
-}
 
 
     progress {
@@ -69,99 +61,12 @@
 
 </style>
 <body>
-    <h1>The Mirrorered Confessional Audio Interphase</h1>
+    <h1>The Mirrored Confessional Audio Interface</h1>
     <br><br>
-    <button class="start-button" id="controlButton" onclick="toggleDynamicMix()">Start Confessional Mix</button>
-    <script>
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        let sources = [];
-        let gainNodes = [];
-        let buffers = [];
-        let focusIndex = 0;
-        let intervalId;
-        let isPlaying = false;
-        const amplifiers = [1.25, 0.75, 1.25, 4.5];  // Specific amplifier settings for each track
+    <a href="mono.html"><button class="start-button">Mono Mix</button></a>
+    <br>
+    <br>
 
-        async function loadAudioFile(url) {
-            const response = await fetch(url);
-            const arrayBuffer = await response.arrayBuffer();
-            return audioCtx.decodeAudioData(arrayBuffer);
-        }
-
-        function setupGainNodes() {
-            gainNodes = buffers.map((_, i) => {
-                const gainNode = audioCtx.createGain();
-                gainNode.gain.setValueAtTime(amplifiers[i], audioCtx.currentTime);  // Set initial amplifier
-                return gainNode;
-            });
-            updateGains();  // Initial gain setup
-        }
-
-        function updateGains() {
-            const transitionDuration = 1.5;  // Transition duration of 1.5 seconds
-            const currentTime = audioCtx.currentTime;
-
-            gainNodes.forEach((gain, i) => {
-                const targetVolume = (i === focusIndex) ? 1 : 0.3;  // Focus track at full volume, others at reduced volume
-                const newVolume = targetVolume * amplifiers[i];
-                gain.gain.linearRampToValueAtTime(newVolume, currentTime + transitionDuration);  // Smooth transition to new volume
-            });
-        }
-
-        function toggleDynamicMix() {
-            if (isPlaying) {
-                stopDynamicMix();
-                document.getElementById("controlButton").innerText = "Start Confessional Mix";
-                document.getElementById("controlButton").className = "start-button";
-            } else {
-                startDynamicMix();
-                document.getElementById("controlButton").innerText = "Stop Confessional Mix";
-                document.getElementById("controlButton").className = "stop-button";
-            }
-            isPlaying = !isPlaying;
-        }
-
-        function startDynamicMix() {
-            const audioFiles = [
-                "Audios/Avelino_Cortina.mp3",
-                "Audios/Mole_McHenry.mp3",
-                "Audios/Anonymous.mp3",
-                "Audios/Timo_Weila.mp3",
-            ];
-
-            clearInterval(intervalId);
-            sources.forEach(source => source.disconnect());  // Disconnect existing sources
-            sources = [];
-
-            Promise.all(audioFiles.map(file => loadAudioFile(file))).then(loadedBuffers => {
-                buffers = loadedBuffers;
-                setupGainNodes();
-
-                buffers.forEach((buffer, i) => {
-                    const source = audioCtx.createBufferSource();
-                    source.buffer = buffer;
-                    source.loop = true;  // Enable looping
-                    source.connect(gainNodes[i]).connect(audioCtx.destination);
-
-                    // Start the audio sources with specified initial delays
-                    const startTime = audioCtx.currentTime + (i * 5); // Incremental delays (0s, 5s, 10s, 15s)
-                    source.start(startTime);
-                    sources.push(source);
-                });
-
-                // Rotate focus every 20 seconds with smooth transitions
-                intervalId = setInterval(() => {
-                    focusIndex = (focusIndex + 1) % buffers.length;
-                    updateGains();
-                }, 5000); // Change focus every 20 seconds
-            });
-        }
-
-        function stopDynamicMix() {
-            clearInterval(intervalId);
-            sources.forEach(source => source.disconnect());  // Disconnect existing sources
-            sources = [];
-        }
-    </script>
+    <a href="leftright.html"><button class="start-button">Left + Right Mix</button></a>
 </body>
 </html>

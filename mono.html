@@ -3,19 +3,22 @@
 <head>
 <meta charset="UTF-8">
 <title>Dynamic Audio Mixer</title>
+</head>
 <style>
     html {
-        padding-left: 10%;
-        padding-right: 10%;
-        height: 100%;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        text-align: center;
-        background-color: rgb(255, 255, 255);
-        font-family: 'Courier New', Courier, monospace;
-        color: rgb(0, 0, 0);
-    }
+    padding-left: 10%;
+    padding-right: 10%;
+
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    background-color: rgb(255, 255, 255);
+    font-family: 'Courier New', Courier, monospace;
+    color: rgb(0, 0, 0);
+}
+
 
     h1 {
         font-size: 2.5em;
@@ -23,33 +26,36 @@
     }
 
     .start-button, .stop-button {
-        padding: 10px 20px;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-        color: #fff;
-        font-size: 1.2em;
-        transition: background-color 0.3s ease;
-        outline: 1px black solid;
-    }
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    color: #fff;
+    font-family:'Courier New', Courier, monospace;    font-size: 1.2em;
+    transition: background-color 0.3s ease;
+    outline: 1px black solid;
+    
+}
 
-    .start-button {
-        background-color: #4CAF50;
-    }
+.start-button {
+    background-color: #4CAF50;
+}
 
-    .start-button:hover {
-        background-color: #b9dfbb;
-        color: black;
-    }
+.start-button:hover {
+    background-color: #b9dfbb;
+    color: black;
+}
 
-    .stop-button {
-        background-color: #FF5733;
-    }
+.stop-button {
+    background-color: #FF5733;
+}
 
-    .stop-button:hover {
-        background-color: #eea69e;
-        color: black;
-    }
+.stop-button:hover {
+    background-color: #eea69e;
+    color: black;
+
+}
+
 
     progress {
         width: 300px;
@@ -60,10 +66,10 @@
     .audio-control {
         margin-top: 10px;
     }
+
 </style>
-</head>
 <body>
-    <h1>The Mirrored Confessional Audio Interface</h1>
+    <h1>The Mirrorered Confessional Audio Interphase</h1>
     <br><br>
     <button class="start-button" id="controlButton" onclick="toggleDynamicMix()">Start Confessional Mix</button>
     <br>
@@ -75,11 +81,10 @@
         let sources = [];
         let gainNodes = [];
         let buffers = [];
-        let panners = [];
         let focusIndex = 0;
         let intervalId;
         let isPlaying = false;
-        const amplifiers = [1.3, 0.8, 5, 1.25];  // Specific amplifier settings for each track
+        const amplifiers = [1.25, 0.75, 1.25, 4.5];  // Specific amplifier settings for each track
 
         async function loadAudioFile(url) {
             const response = await fetch(url);
@@ -97,7 +102,7 @@
         }
 
         function updateGains() {
-            const transitionDuration = 1;  
+            const transitionDuration = 1.5;  // Transition duration of 1.5 seconds
             const currentTime = audioCtx.currentTime;
 
             gainNodes.forEach((gain, i) => {
@@ -124,9 +129,8 @@
             const audioFiles = [
                 "Audios/Avelino_Cortina.mp3",
                 "Audios/Mole_McHenry.mp3",
-                "Audios/Timo_Weila.mp3",
                 "Audios/Anonymous.mp3",
-
+                "Audios/Timo_Weila.mp3",
             ];
 
             clearInterval(intervalId);
@@ -139,26 +143,27 @@
 
                 buffers.forEach((buffer, i) => {
                     const source = audioCtx.createBufferSource();
-                    const panner = audioCtx.createStereoPanner();
-                    panner.pan.value = (i % 2 === 0) ? 1 : -1;  // Right for 1st and 3rd, Left for 2nd and 4th
                     source.buffer = buffer;
-                    source.loop = true;
-                    source.connect(panner).connect(gainNodes[i]).connect(audioCtx.destination);
-                    const startTime = audioCtx.currentTime + (i * 5);
+                    source.loop = true;  // Enable looping
+                    source.connect(gainNodes[i]).connect(audioCtx.destination);
+
+                    // Start the audio sources with specified initial delays
+                    const startTime = audioCtx.currentTime + (i * 5); // Incremental delays (0s, 5s, 10s, 15s)
                     source.start(startTime);
                     sources.push(source);
                 });
 
+                // Rotate focus every 20 seconds with smooth transitions
                 intervalId = setInterval(() => {
                     focusIndex = (focusIndex + 1) % buffers.length;
                     updateGains();
-                }, 5000); // Change focus every 5 seconds
+                }, 5000); // Change focus every 20 seconds
             });
         }
 
         function stopDynamicMix() {
             clearInterval(intervalId);
-            sources.forEach(source => source.disconnect());
+            sources.forEach(source => source.disconnect());  // Disconnect existing sources
             sources = [];
         }
     </script>
