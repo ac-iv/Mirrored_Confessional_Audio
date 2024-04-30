@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Dynamic Audio Mixer</title>
+<style>
+    html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: #f4f4f4;
+        font-family: 'Arial', sans-serif;
+    }
+    .audio-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+        width: 60%;
+        padding: 20px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        background: #fff;
+        border-radius: 10px;
+    }
+    .audio-tile, .stop-all-button {
+        padding: 20px;
+        background-color: #4CAF50;
+        border: none;
+        border-radius: 5px;
+        color: #fff;
+        font-size: 1.5em;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+    }
+    .audio-tile:hover, .stop-all-button:hover {
+        background-color: #b9dfbb;
+        color: black;
+    }
+    .stop-all-button {
+        grid-column: span 2; /* makes it span across all columns */
+        margin-top: 10px;
+        background-color: #FF5733;
+    }
+    h1 {
+        grid-column: span 2;
+        text-align: center;
+        margin-bottom: 15px;
+    }
+    #statusBar {
+        grid-column: span 2;
+        font-size: 0.8em;
+        color: #555;
+        margin-top: 5px;
+    }
+</style>
+</head>
+<body>
+    <div class="audio-grid">
+        <h1>The Mirrored Confessional Audio Interface</h1>
+        <button class="audio-tile" onclick="playAudio(0)">Track 1</button>
+        <button class="audio-tile" onclick="playAudio(1)">Track 2</button>
+        <button class="audio-tile" onclick="playAudio(2)">Track 3</button>
+        <button class="audio-tile" onclick="playAudio(3)">Track 4</button>
+        <button class="stop-all-button" onclick="stopAll()">Stop All Tracks</button>
+        <div id="statusBar">Select a track to play.</div>
+    </div>
+
+    <script>
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        let sources = Array(4).fill(null); // Initialize source array to manage multiple tracks
+        const audioFiles = [
+            "Audios/Avelino_Cortina.mp3",
+            "Audios/Mole_McHenry.mp3",
+            "Audios/Anonymous.mp3",
+            "Audios/Timo_Weila.mp3",
+        ];
+
+        async function loadAudioFiles() {
+            const filePromises = audioFiles.map(file => fetch(file).then(response => response.arrayBuffer()));
+            const arrayBuffers = await Promise.all(filePromises);
+            const decodePromises = arrayBuffers.map(arrayBuffer => audioCtx.decodeAudioData(arrayBuffer));
+            buffers = await Promise.all(decodePromises);
+        }
+
+        function playAudio(index) {
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            if (sources[index]) {
+                sources[index].stop();
+                sources[index].disconnect();
+            }
+            sources.forEach((src, i) => {
+                if (src && i !== index) {
+                    src.stop();
+                    src.disconnect();
+                    sources[i] = null;
+                }
+            });
+
+            const source = audioCtx.createBufferSource();
+            source.buffer = buffers[index];
+            source.connect(audioCtx.destination);
+            source.start();
+            sources[index] = source;
+
+            updateStatusBar(`Playing Track ${index + 1}`);
+        }
+
+        function stopAll() {
+            sources.forEach(src => {
+                if (src) {
+                    src.stop();
+                    src.disconnect();
+                }
+            });
+            sources.fill(null);
+            updateStatusBar("All tracks stopped.");
+        }
+
+        function updateStatusBar(message) {
+            document.getElementById("statusBar").innerText = message;
+        }
+
+        window.onload = () => {
+            loadAudioFiles();
+        };
+    </script>
+</body>
+</html>
